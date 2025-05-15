@@ -1,0 +1,2 @@
+C:/Users/dopok/Downloads/iks/android/app/.cxx/Debug/195x2m4f/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/dopok/Downloads/iks/android/app/.cxx/Debug/195x2m4f/armeabi-v7a/CMakeFiles/rebuild_cache.dir
