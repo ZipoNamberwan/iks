@@ -7,22 +7,22 @@ import 'package:iks/model/survey/question_type.dart';
 class QuestionWidget extends StatefulWidget {
   final Question question;
   final QuestionResponse response;
-  final FocusNode focusNode;
+  final FocusNode? focusNode;
   final Function(dynamic) onAnswered;
 
   const QuestionWidget({
-    Key? key,
+    super.key,
     required this.question,
     required this.response,
-    required this.focusNode,
+    this.focusNode,
     required this.onAnswered,
-  }) : super(key: key);
+  });
 
   @override
-  _QuestionWidgetState createState() => _QuestionWidgetState();
+  QuestionWidgetState createState() => QuestionWidgetState();
 }
 
-class _QuestionWidgetState extends State<QuestionWidget> {
+class QuestionWidgetState extends State<QuestionWidget> {
   // Controllers for text and number inputs
   late TextEditingController _textController;
 
@@ -62,10 +62,10 @@ class _QuestionWidgetState extends State<QuestionWidget> {
           controller: _textController,
           focusNode: widget.focusNode,
           decoration: InputDecoration(
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
             hintText: widget.question.hint,
           ),
-          onChanged: (value) {
+          onSubmitted: (value) {
             widget.onAnswered(value);
           },
         );
@@ -75,14 +75,14 @@ class _QuestionWidgetState extends State<QuestionWidget> {
           controller: _textController,
           focusNode: widget.focusNode,
           decoration: InputDecoration(
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
             hintText: widget.question.hint,
           ),
           keyboardType: TextInputType.number,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
           ],
-          onChanged: (value) {
+          onSubmitted: (value) {
             widget.onAnswered(value.isEmpty ? null : int.parse(value));
           },
         );
@@ -98,9 +98,6 @@ class _QuestionWidgetState extends State<QuestionWidget> {
 
       case QuestionType.date:
         return _buildDatePicker();
-
-      default:
-        return Text('Unsupported question type: ${widget.question.type}');
     }
   }
 
@@ -159,7 +156,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
 
     return DropdownButtonFormField<dynamic>(
       decoration: InputDecoration(
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
         hintText: widget.question.hint,
       ),
       value: widget.response.value,
@@ -194,7 +191,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
       },
       child: InputDecorator(
         decoration: InputDecoration(
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
           hintText: widget.question.hint ?? 'Select a date',
         ),
         child: Row(
@@ -210,7 +207,7 @@ class _QuestionWidgetState extends State<QuestionWidget> {
                     : Colors.grey[600],
               ),
             ),
-            Icon(Icons.calendar_today),
+            const Icon(Icons.calendar_today),
           ],
         ),
       ),

@@ -50,10 +50,7 @@ class SurveyStorageService {
         '$_keyPrefix$surveyId',
         jsonEncode(surveyResponseMap),
       );
-
-      print('Saved section response to local storage: $sectionId');
     } catch (e) {
-      print('Error saving section response: $e');
       throw Exception('Failed to save section response: $e');
     }
   }
@@ -70,10 +67,8 @@ class SurveyStorageService {
 
       // TODO: Implement proper deserialization from JSON to SurveyResponse
       // This is a placeholder for now
-      print('Retrieved survey response from local storage: $surveyId');
       return null;
     } catch (e) {
-      print('Error retrieving survey response: $e');
       throw Exception('Failed to retrieve survey response: $e');
     }
   }
@@ -91,11 +86,7 @@ class SurveyStorageService {
         '$_keyPrefix${surveyResponse.surveyId}',
         jsonEncode(surveyResponse.toJson()),
       );
-
-      print(
-          'Saved complete survey response to local storage: ${surveyResponse.surveyId}');
     } catch (e) {
-      print('Error saving survey response: $e');
       throw Exception('Failed to save survey response: $e');
     }
   }
@@ -114,9 +105,7 @@ class SurveyStorageService {
         await prefs.remove(key);
       }
 
-      print('Cleared all survey responses from local storage');
     } catch (e) {
-      print('Error clearing survey responses: $e');
       throw Exception('Failed to clear survey responses: $e');
     }
   }

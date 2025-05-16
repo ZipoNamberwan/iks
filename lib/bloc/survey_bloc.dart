@@ -114,9 +114,9 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       ));
 
       // Auto-navigate to next question if current answer is valid
-      if (validationResult.isValid) {
-        add(NavigateToNextQuestion());
-      }
+      // if (validationResult.isValid) {
+      //   add(NavigateToNextQuestion());
+      // }
     }
   }
 
@@ -268,11 +268,15 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       final survey = currentState.survey;
 
       if (event.sectionIndex < 0 ||
-          event.sectionIndex >= survey.sections.length) return;
+          event.sectionIndex >= survey.sections.length) {
+        return;
+      }
 
       final targetSection = survey.sections[event.sectionIndex];
       if (event.questionIndex < 0 ||
-          event.questionIndex >= targetSection.questions.length) return;
+          event.questionIndex >= targetSection.questions.length) {
+        return;
+      }
 
       // If changing sections, save the current section
       if (event.sectionIndex != currentState.currentSectionIndex) {
@@ -295,7 +299,9 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       final survey = currentState.survey;
 
       if (event.sectionIndex < 0 ||
-          event.sectionIndex >= survey.sections.length) return;
+          event.sectionIndex >= survey.sections.length) {
+        return;
+      }
 
       // Save the current section data before navigating
       add(SaveSectionData(currentState.currentSectionIndex));
@@ -317,7 +323,9 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       final survey = currentState.survey;
 
       if (event.sectionIndex < 0 ||
-          event.sectionIndex >= survey.sections.length) return;
+          event.sectionIndex >= survey.sections.length) {
+        return;
+      }
 
       // Get section
       final section = survey.sections[event.sectionIndex];
@@ -344,9 +352,6 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
 
       // Update section completion status
       sectionResponse.isComplete = isComplete;
-
-      // In a real app, here you would save the data to local storage or a database
-      print('Saving section ${section.id} data: ${sectionResponse.toJson()}');
 
       // This is where you would call a repository method to save the data
       try {
@@ -381,7 +386,7 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       bool isValid = true;
       String? firstInvalidSectionId;
       int? firstInvalidSectionIndex;
-      String? firstInvalidQuestionId;
+      // String? firstInvalidQuestionId;
       int? firstInvalidQuestionIndex;
 
       // Check each section
@@ -412,7 +417,7 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
             if (firstInvalidSectionId == null) {
               firstInvalidSectionId = section.id;
               firstInvalidSectionIndex = sectionIndex;
-              firstInvalidQuestionId = question.id;
+              // firstInvalidQuestionId = question.id;
               firstInvalidQuestionIndex = questionIndex;
             }
           }

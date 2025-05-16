@@ -1,0 +1,2 @@
+C:/Users/maswa/Downloads/IKS/iks/android/app/.cxx/Debug/4o30186s/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/maswa/Downloads/IKS/iks/android/app/.cxx/Debug/4o30186s/armeabi-v7a/CMakeFiles/rebuild_cache.dir

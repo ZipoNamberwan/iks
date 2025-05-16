@@ -39,9 +39,7 @@ class SurveyLoaded extends SurveyState {
       survey: survey ?? this.survey,
       surveyResponse: surveyResponse ?? this.surveyResponse,
       currentSectionIndex: currentSectionIndex ?? this.currentSectionIndex,
-      currentQuestionIndex: currentQuestionIndex != null
-          ? currentQuestionIndex
-          : this.currentQuestionIndex,
+      currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       isSubmitting: isSubmitting ?? this.isSubmitting,
     );
   }
