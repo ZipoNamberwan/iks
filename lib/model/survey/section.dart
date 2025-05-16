@@ -1,16 +1,16 @@
-import 'package:iks/model/survey/section.dart';
+import 'package:iks/model/survey/question.dart';
 
-class Survey {
+class Section {
   final String id;
   final String title;
   final String? description;
-  final List<Section> sections;
+  final List<Question> questions;
 
-  Survey({
+  Section({
     required this.id,
     required this.title,
     this.description,
-    required this.sections,
+    required this.questions,
   });
 
   Map<String, dynamic> toJson() {
@@ -18,17 +18,17 @@ class Survey {
       'id': id,
       'title': title,
       'description': description,
-      'sections': sections.map((s) => s.toJson()).toList(),
+      'questions': questions.map((q) => q.toJson()).toList(),
     };
   }
 
-  factory Survey.fromJson(Map<String, dynamic> json) {
-    return Survey(
+  factory Section.fromJson(Map<String, dynamic> json) {
+    return Section(
       id: json['id'],
       title: json['title'],
       description: json['description'],
-      sections:
-          (json['sections'] as List).map((s) => Section.fromJson(s)).toList(),
+      questions:
+          (json['questions'] as List).map((q) => Question.fromJson(q)).toList(),
     );
   }
 }

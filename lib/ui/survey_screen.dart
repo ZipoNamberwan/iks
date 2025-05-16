@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:iks/model/response/survey_response.dart';
-import 'package:iks/model/survey/survey.dart';
+import 'package:iks/model/response/question_response.dart';
+import 'package:iks/model/survey/question.dart';
 import 'package:iks/ui/question_widget.dart';
 import '../bloc/survey_bloc.dart';
 import '../bloc/survey_event.dart';
@@ -82,8 +82,8 @@ class SurveyScreenState extends State<SurveyScreen> {
         }
 
         if (state is SurveyLoaded) {
-          final survey = state.survey;
-          final currentSectionIndex = state.currentSectionIndex;
+          final survey = state.data.survey;
+          final currentSectionIndex = state.data.currentSectionIndex;
 
           if (currentSectionIndex >= survey.sections.length) {
             return const Scaffold(
@@ -93,7 +93,7 @@ class SurveyScreenState extends State<SurveyScreen> {
 
           final currentSection = survey.sections[currentSectionIndex];
           final sectionResponse =
-              state.surveyResponse.sectionResponses[currentSection.id]!;
+              state.data.surveyResponse.sectionResponses[currentSection.id]!;
 
           return Scaffold(
             // AppBar that shows/hides based on scroll
@@ -120,6 +120,7 @@ class SurveyScreenState extends State<SurveyScreen> {
                           (index) {
                             final isActive = index == currentSectionIndex;
                             final isComplete = state
+                                .data
                                 .surveyResponse
                                 .sectionResponses[survey.sections[index].id]!
                                 .isComplete;

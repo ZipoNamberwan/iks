@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:iks/model/response/survey_response.dart';
-import 'package:iks/model/survey/survey.dart';
+import 'package:iks/model/response/question_response.dart';
+import 'package:iks/model/survey/question.dart';
 import 'package:iks/model/survey/question_type.dart';
 
 class QuestionWidget extends StatefulWidget {

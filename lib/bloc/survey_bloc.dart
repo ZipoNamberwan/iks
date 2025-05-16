@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iks/model/response/question_response.dart';
+import 'package:iks/model/response/section_response.dart';
 import 'package:iks/model/response/survey_response.dart';
-import 'package:iks/model/survey/survey.dart';
+import 'package:iks/model/survey/question.dart';
 import 'package:iks/model/survey/validation.dart';
 import 'package:iks/repositories/survey_repositories.dart';
 import 'survey_event.dart';
@@ -9,7 +11,7 @@ import 'survey_state.dart';
 class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
   final SurveyRepository _surveyRepository;
 
-  SurveyBloc(this._surveyRepository) : super(SurveyInitial()) {
+  SurveyBloc(this._surveyRepository) : super(const SurveyInitial()) {
     on<LoadSurvey>(_onLoadSurvey);
     on<AnswerQuestion>(_onAnswerQuestion);
     on<NavigateToNextQuestion>(_onNavigateToNextQuestion);
@@ -25,7 +27,7 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
     LoadSurvey event,
     Emitter<SurveyState> emit,
   ) async {
-    emit(SurveyLoading());
+    emit(const SurveyLoading());
 
     try {
       final survey = await _surveyRepository.getSurvey(event.surveyId);
@@ -55,16 +57,19 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       );
 
       emit(SurveyLoaded(
-        survey: survey,
-        surveyResponse: surveyResponse,
-        currentSectionIndex: 0,
-        currentQuestionIndex: survey.sections.isNotEmpty &&
-                survey.sections[0].questions.isNotEmpty
-            ? 0
-            : null,
+        data: SurveyStateData(
+          survey: survey,
+          surveyResponse: surveyResponse,
+          currentSectionIndex: 0,
+          currentQuestionIndex: survey.sections.isNotEmpty &&
+                  survey.sections[0].questions.isNotEmpty
+              ? 0
+              : null,
+          isSubmitting: false,
+        ),
       ));
     } catch (e) {
-      emit(SurveyError('Failed to load survey: ${e.toString()}'));
+      emit(SurveyError(message: 'Failed to load survey: ${e.toString()}'));
     }
   }
 
@@ -74,8 +79,8 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
   ) async {
     if (state is SurveyLoaded) {
       final currentState = state as SurveyLoaded;
-      final survey = currentState.survey;
-      final currentSectionIndex = currentState.currentSectionIndex;
+      final survey = currentState.data.survey;
+      final currentSectionIndex = currentState.data.currentSectionIndex;
 
       if (currentSectionIndex >= survey.sections.length) return;
 
@@ -89,7 +94,7 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       final question = currentSection.questions[questionIndex];
 
       // Update response
-      final updatedSurveyResponse = currentState.surveyResponse;
+      final updatedSurveyResponse = currentState.data.surveyResponse;
       final sectionResponse =
           updatedSurveyResponse.sectionResponses[currentSection.id]!;
 
@@ -108,10 +113,11 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
 
       updatedSurveyResponse.updatedAt = DateTime.now();
 
-      emit(currentState.copyWith(
+      emit(SurveyLoaded(
+          data: currentState.data.copyWith(
         surveyResponse: updatedSurveyResponse,
         currentQuestionIndex: questionIndex,
-      ));
+      )));
 
       // Auto-navigate to next question if current answer is valid
       // if (validationResult.isValid) {
@@ -201,19 +207,20 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
   ) {
     if (state is SurveyLoaded) {
       final currentState = state as SurveyLoaded;
-      final survey = currentState.survey;
-      final currentSectionIndex = currentState.currentSectionIndex;
+      final survey = currentState.data.survey;
+      final currentSectionIndex = currentState.data.currentSectionIndex;
 
       if (currentSectionIndex >= survey.sections.length) return;
 
       final currentSection = survey.sections[currentSectionIndex];
-      final currentQuestionIndex = currentState.currentQuestionIndex ?? -1;
+      final currentQuestionIndex = currentState.data.currentQuestionIndex ?? -1;
 
       // If we're not at the last question in the section
       if (currentQuestionIndex < currentSection.questions.length - 1) {
-        emit(currentState.copyWith(
+        emit(SurveyLoaded(
+            data: currentState.data.copyWith(
           currentQuestionIndex: currentQuestionIndex + 1,
-        ));
+        )));
       }
       // If we're at the last question and not the last section
       else if (currentSectionIndex < survey.sections.length - 1) {
@@ -221,10 +228,11 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
         add(SaveSectionData(currentSectionIndex));
 
         // Navigate to the first question of the next section
-        emit(currentState.copyWith(
+        emit(SurveyLoaded(
+            data: currentState.data.copyWith(
           currentSectionIndex: currentSectionIndex + 1,
           currentQuestionIndex: 0,
-        ));
+        )));
       }
     }
   }
@@ -235,26 +243,28 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
   ) {
     if (state is SurveyLoaded) {
       final currentState = state as SurveyLoaded;
-      final survey = currentState.survey;
-      final currentSectionIndex = currentState.currentSectionIndex;
+      final survey = currentState.data.survey;
+      final currentSectionIndex = currentState.data.currentSectionIndex;
 
       if (currentSectionIndex >= survey.sections.length) return;
 
-      final currentQuestionIndex = currentState.currentQuestionIndex ?? 0;
+      final currentQuestionIndex = currentState.data.currentQuestionIndex ?? 0;
 
       // If we're not at the first question in the section
       if (currentQuestionIndex > 0) {
-        emit(currentState.copyWith(
+        emit(SurveyLoaded(
+            data: currentState.data.copyWith(
           currentQuestionIndex: currentQuestionIndex - 1,
-        ));
+        )));
       }
       // If we're at the first question and not the first section
       else if (currentSectionIndex > 0) {
         final previousSection = survey.sections[currentSectionIndex - 1];
-        emit(currentState.copyWith(
+        emit(SurveyLoaded(
+            data: currentState.data.copyWith(
           currentSectionIndex: currentSectionIndex - 1,
           currentQuestionIndex: previousSection.questions.length - 1,
-        ));
+        )));
       }
     }
   }
@@ -265,7 +275,7 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
   ) {
     if (state is SurveyLoaded) {
       final currentState = state as SurveyLoaded;
-      final survey = currentState.survey;
+      final survey = currentState.data.survey;
 
       if (event.sectionIndex < 0 ||
           event.sectionIndex >= survey.sections.length) {
@@ -279,14 +289,15 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       }
 
       // If changing sections, save the current section
-      if (event.sectionIndex != currentState.currentSectionIndex) {
-        add(SaveSectionData(currentState.currentSectionIndex));
+      if (event.sectionIndex != currentState.data.currentSectionIndex) {
+        add(SaveSectionData(currentState.data.currentSectionIndex));
       }
 
-      emit(currentState.copyWith(
+      emit(SurveyLoaded(
+          data: currentState.data.copyWith(
         currentSectionIndex: event.sectionIndex,
         currentQuestionIndex: event.questionIndex,
-      ));
+      )));
     }
   }
 
@@ -296,7 +307,7 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
   ) {
     if (state is SurveyLoaded) {
       final currentState = state as SurveyLoaded;
-      final survey = currentState.survey;
+      final survey = currentState.data.survey;
 
       if (event.sectionIndex < 0 ||
           event.sectionIndex >= survey.sections.length) {
@@ -304,13 +315,14 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       }
 
       // Save the current section data before navigating
-      add(SaveSectionData(currentState.currentSectionIndex));
+      add(SaveSectionData(currentState.data.currentSectionIndex));
 
-      emit(currentState.copyWith(
+      emit(SurveyLoaded(
+          data: currentState.data.copyWith(
         currentSectionIndex: event.sectionIndex,
         currentQuestionIndex:
             0, // Start at the first question of the new section
-      ));
+      )));
     }
   }
 
@@ -320,7 +332,7 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
   ) async {
     if (state is SurveyLoaded) {
       final currentState = state as SurveyLoaded;
-      final survey = currentState.survey;
+      final survey = currentState.data.survey;
 
       if (event.sectionIndex < 0 ||
           event.sectionIndex >= survey.sections.length) {
@@ -332,7 +344,7 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
 
       // Get section response
       final sectionResponse =
-          currentState.surveyResponse.sectionResponses[section.id]!;
+          currentState.data.surveyResponse.sectionResponses[section.id]!;
 
       // Check if all required questions are answered and valid
       bool isComplete = true;
@@ -356,20 +368,22 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       // This is where you would call a repository method to save the data
       try {
         await _surveyRepository.saveSectionResponse(
-          currentState.surveyResponse.surveyId,
+          currentState.data.surveyResponse.surveyId,
           section.id,
           sectionResponse,
         );
 
         // Update the survey response in the state
-        final updatedSurveyResponse = currentState.surveyResponse;
+        final updatedSurveyResponse = currentState.data.surveyResponse;
         updatedSurveyResponse.updatedAt = DateTime.now();
 
-        emit(currentState.copyWith(
+        emit(SurveyLoaded(
+            data: currentState.data.copyWith(
           surveyResponse: updatedSurveyResponse,
-        ));
+        )));
       } catch (e) {
-        emit(SurveyError('Failed to save section data: ${e.toString()}'));
+        emit(SurveyError(
+            message: 'Failed to save section data: ${e.toString()}'));
       }
     }
   }
@@ -380,8 +394,8 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
   ) {
     if (state is SurveyLoaded) {
       final currentState = state as SurveyLoaded;
-      final survey = currentState.survey;
-      final surveyResponse = currentState.surveyResponse;
+      final survey = currentState.data.survey;
+      final surveyResponse = currentState.data.surveyResponse;
 
       bool isValid = true;
       String? firstInvalidSectionId;
@@ -428,10 +442,11 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       if (!isValid &&
           firstInvalidSectionIndex != null &&
           firstInvalidQuestionIndex != null) {
-        emit(currentState.copyWith(
+        emit(SurveyLoaded(
+            data: currentState.data.copyWith(
           currentSectionIndex: firstInvalidSectionIndex,
           currentQuestionIndex: firstInvalidQuestionIndex,
-        ));
+        )));
       }
     }
   }
@@ -447,7 +462,7 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       add(ValidateSurvey());
 
       // Check if any sections are incomplete
-      final surveyResponse = currentState.surveyResponse;
+      final surveyResponse = currentState.data.surveyResponse;
       final hasIncompleteSection = surveyResponse.sectionResponses.values
           .any((section) => !section.isComplete);
 
@@ -457,14 +472,14 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       }
 
       // If all sections are complete, submit the survey
-      emit(currentState.copyWith(isSubmitting: true));
+      emit(SurveyLoaded(data: currentState.data.copyWith(isSubmitting: true)));
 
       try {
         final submittedResponse =
             await _surveyRepository.submitSurvey(surveyResponse);
         emit(SurveySubmitted(submittedResponse));
       } catch (e) {
-        emit(SurveyError('Failed to submit survey: ${e.toString()}'));
+        emit(SurveyError(message: 'Failed to submit survey: ${e.toString()}'));
       }
     }
   }
