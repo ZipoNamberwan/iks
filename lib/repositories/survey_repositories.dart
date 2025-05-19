@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:iks/model/response/section_response.dart';
+import 'package:iks/model/response/question_response.dart';
 import 'package:iks/model/response/survey_response.dart';
 import 'package:iks/model/survey/option.dart';
 import 'package:iks/model/survey/question.dart';
@@ -34,23 +34,27 @@ class SurveyRepository {
   Future<void> saveSectionResponse(
     String surveyId,
     String sectionId,
-    SectionResponse sectionResponse,
+    Map<String, QuestionResponse> sectionResponses,
   ) async {
     // Simulate API delay
     await Future.delayed(const Duration(milliseconds: 200));
 
-    // Check if we already have a response for this survey
+    // Ensure we have a SurveyResponse to update
     if (!_responses.containsKey(surveyId)) {
       _responses[surveyId] = SurveyResponse(
         surveyId: surveyId,
-        sectionResponses: {},
+        questionResponses: {},
       );
     }
 
-    // Update the section response
-    _responses[surveyId]!.sectionResponses[sectionId] = sectionResponse;
-    _responses[surveyId]!.updatedAt = DateTime.now();
+    // Update the individual question responses from the section
+    final existingSurveyResponse = _responses[surveyId]!;
 
+    for (final entry in sectionResponses.entries) {
+      existingSurveyResponse.questionResponses[entry.key] = entry.value;
+    }
+
+    existingSurveyResponse.updatedAt = DateTime.now();
   }
 
   // Submit the entire survey

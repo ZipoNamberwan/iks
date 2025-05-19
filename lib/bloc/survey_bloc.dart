@@ -1,6 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iks/model/response/question_response.dart';
-import 'package:iks/model/response/section_response.dart';
 import 'package:iks/model/response/survey_response.dart';
 import 'package:iks/model/survey/question.dart';
 import 'package:iks/model/survey/validation.dart';
@@ -32,28 +31,21 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
     try {
       final survey = await _surveyRepository.getSurvey(event.surveyId);
 
-      // Initialize response structure
-      final Map<String, SectionResponse> sectionResponses = {};
+      // Flatten all question responses
+      final Map<String, QuestionResponse> questionResponses = {};
 
       for (final section in survey.sections) {
-        final Map<String, QuestionResponse> questionResponses = {};
-
         for (final question in section.questions) {
           questionResponses[question.id] = QuestionResponse(
             questionId: question.id,
             value: question.defaultValue,
           );
         }
-
-        sectionResponses[section.id] = SectionResponse(
-          sectionId: section.id,
-          responses: questionResponses,
-        );
       }
 
       final surveyResponse = SurveyResponse(
         surveyId: survey.id,
-        sectionResponses: sectionResponses,
+        questionResponses: questionResponses,
       );
 
       emit(SurveyLoaded(
@@ -95,10 +87,9 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
 
       // Update response
       final updatedSurveyResponse = currentState.data.surveyResponse;
-      final sectionResponse =
-          updatedSurveyResponse.sectionResponses[currentSection.id]!;
+      final questionResponse =
+          updatedSurveyResponse.questionResponses[event.questionId]!;
 
-      final questionResponse = sectionResponse.responses[event.questionId]!;
       questionResponse.value = event.value;
 
       // Validate the answer
@@ -114,10 +105,11 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       updatedSurveyResponse.updatedAt = DateTime.now();
 
       emit(SurveyLoaded(
-          data: currentState.data.copyWith(
-        surveyResponse: updatedSurveyResponse,
-        currentQuestionIndex: questionIndex,
-      )));
+        data: currentState.data.copyWith(
+          surveyResponse: updatedSurveyResponse,
+          currentQuestionIndex: questionIndex,
+        ),
+      ));
 
       // Auto-navigate to next question if current answer is valid
       // if (validationResult.isValid) {
@@ -131,7 +123,6 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
     QuestionResponse response,
     SurveyResponse surveyResponse,
   ) {
-    // No validation rules
     if (question.validationRules == null || question.validationRules!.isEmpty) {
       return ValidationResult(isValid: true);
     }
@@ -151,29 +142,17 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
 
       // Dependency validation
       else if (rule.type == 'dependency' && rule.dependsOnQuestionId != null) {
-        // Find the section that contains the dependency question
-        String? dependencySectionId;
-        for (final section in surveyResponse.sectionResponses.values) {
-          if (section.responses.containsKey(rule.dependsOnQuestionId)) {
-            dependencySectionId = section.sectionId;
-            break;
-          }
-        }
+        final dependencyResponse =
+            surveyResponse.questionResponses[rule.dependsOnQuestionId!];
 
-        if (dependencySectionId != null) {
-          final dependencyResponse = surveyResponse
-              .sectionResponses[dependencySectionId]!
-              .responses[rule.dependsOnQuestionId!]!;
-
-          // Example: Age < 10 but marital status is married
-          if (rule.dependsOnValue == dependencyResponse.value &&
-              !_evaluateDependencyCondition(rule.condition, response.value)) {
-            return ValidationResult(
-              isValid: false,
-              message: rule.message ??
-                  'This answer is not compatible with previous answers',
-            );
-          }
+        if (dependencyResponse != null &&
+            rule.dependsOnValue == dependencyResponse.value &&
+            !_evaluateDependencyCondition(rule.condition, response.value)) {
+          return ValidationResult(
+            isValid: false,
+            message: rule.message ??
+                'This answer is not compatible with previous answers',
+          );
         }
       }
     }
@@ -339,48 +318,45 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
         return;
       }
 
-      // Get section
       final section = survey.sections[event.sectionIndex];
+      final updatedSurveyResponse = currentState.data.surveyResponse;
 
-      // Get section response
-      final sectionResponse =
-          currentState.data.surveyResponse.sectionResponses[section.id]!;
+      // Check if all required questions in the section are answered and valid
+      // bool isComplete = true;
+      // for (final question in section.questions) {
+      //   final hasRequiredRule = question.validationRules?.any(
+      //         (rule) => rule.type == 'required',
+      //       ) ??
+      //       false;
 
-      // Check if all required questions are answered and valid
-      bool isComplete = true;
-      for (final question in section.questions) {
-        final hasRequiredRule = question.validationRules?.any(
-              (rule) => rule.type == 'required',
-            ) ??
-            false;
+      //   final response = updatedSurveyResponse.questionResponses[question.id]!;
 
-        final response = sectionResponse.responses[question.id]!;
+      //   if (hasRequiredRule && !response.isValid) {
+      //     isComplete = false;
+      //     break;
+      //   }
+      // }
 
-        if (hasRequiredRule && !response.isValid) {
-          isComplete = false;
-          break;
-        }
-      }
-
-      // Update section completion status
-      sectionResponse.isComplete = isComplete;
-
-      // This is where you would call a repository method to save the data
       try {
+        // Save only relevant question responses for this section
+        final Map<String, QuestionResponse> sectionResponses = {
+          for (final question in section.questions)
+            question.id: updatedSurveyResponse.questionResponses[question.id]!,
+        };
+
         await _surveyRepository.saveSectionResponse(
-          currentState.data.surveyResponse.surveyId,
+          updatedSurveyResponse.surveyId,
           section.id,
-          sectionResponse,
+          sectionResponses,
         );
 
-        // Update the survey response in the state
-        final updatedSurveyResponse = currentState.data.surveyResponse;
         updatedSurveyResponse.updatedAt = DateTime.now();
 
         emit(SurveyLoaded(
-            data: currentState.data.copyWith(
-          surveyResponse: updatedSurveyResponse,
-        )));
+          data: currentState.data.copyWith(
+            surveyResponse: updatedSurveyResponse,
+          ),
+        ));
       } catch (e) {
         emit(SurveyError(
             message: 'Failed to save section data: ${e.toString()}'));
@@ -398,55 +374,44 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       final surveyResponse = currentState.data.surveyResponse;
 
       bool isValid = true;
-      String? firstInvalidSectionId;
       int? firstInvalidSectionIndex;
-      // String? firstInvalidQuestionId;
       int? firstInvalidQuestionIndex;
 
-      // Check each section
       for (int sectionIndex = 0;
           sectionIndex < survey.sections.length;
           sectionIndex++) {
         final section = survey.sections[sectionIndex];
-        final sectionResponse = surveyResponse.sectionResponses[section.id]!;
 
-        // Check each question in the section
         for (int questionIndex = 0;
             questionIndex < section.questions.length;
             questionIndex++) {
           final question = section.questions[questionIndex];
-          final response = sectionResponse.responses[question.id]!;
+          final response = surveyResponse.questionResponses[question.id]!;
 
-          // Check if there are required validation rules
           final hasRequiredRule = question.validationRules?.any(
                 (rule) => rule.type == 'required',
               ) ??
               false;
 
-          // If question is required and not valid
           if (hasRequiredRule && !response.isValid) {
             isValid = false;
-
-            // Store the first invalid question info for navigation
-            if (firstInvalidSectionId == null) {
-              firstInvalidSectionId = section.id;
+            if (firstInvalidSectionIndex == null) {
               firstInvalidSectionIndex = sectionIndex;
-              // firstInvalidQuestionId = question.id;
               firstInvalidQuestionIndex = questionIndex;
             }
           }
         }
       }
 
-      // If the survey is not valid, navigate to the first invalid question
       if (!isValid &&
           firstInvalidSectionIndex != null &&
           firstInvalidQuestionIndex != null) {
         emit(SurveyLoaded(
-            data: currentState.data.copyWith(
-          currentSectionIndex: firstInvalidSectionIndex,
-          currentQuestionIndex: firstInvalidQuestionIndex,
-        )));
+          data: currentState.data.copyWith(
+            currentSectionIndex: firstInvalidSectionIndex,
+            currentQuestionIndex: firstInvalidQuestionIndex,
+          ),
+        ));
       }
     }
   }
@@ -461,18 +426,37 @@ class SurveyBloc extends Bloc<SurveyEvent, SurveyState> {
       // Validate the survey first
       add(ValidateSurvey());
 
-      // Check if any sections are incomplete
-      final surveyResponse = currentState.data.surveyResponse;
-      final hasIncompleteSection = surveyResponse.sectionResponses.values
-          .any((section) => !section.isComplete);
+      // After dispatching the validation, we need to allow it to take effect
+      await Future.delayed(Duration.zero); // give it a cycle
 
-      if (hasIncompleteSection) {
-        // If there are incomplete sections, the ValidateSurvey event will navigate to the first issue
-        return;
+      final surveyResponse = currentState.data.surveyResponse;
+      final survey = currentState.data.survey;
+
+      // Check for completeness: all required questions must be valid
+      bool hasIncomplete = false;
+
+      for (final section in survey.sections) {
+        for (final question in section.questions) {
+          final hasRequiredRule = question.validationRules?.any(
+                (rule) => rule.type == 'required',
+              ) ??
+              false;
+
+          final response = surveyResponse.questionResponses[question.id]!;
+
+          if (hasRequiredRule && !response.isValid) {
+            hasIncomplete = true;
+            break;
+          }
+        }
+        if (hasIncomplete) break;
       }
 
-      // If all sections are complete, submit the survey
-      emit(SurveyLoaded(data: currentState.data.copyWith(isSubmitting: true)));
+      if (hasIncomplete) return;
+
+      emit(SurveyLoaded(
+        data: currentState.data.copyWith(isSubmitting: true),
+      ));
 
       try {
         final submittedResponse =

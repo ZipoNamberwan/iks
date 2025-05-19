@@ -57,6 +57,7 @@ class SurveyScreenState extends State<SurveyScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return BlocConsumer<SurveyBloc, SurveyState>(
       listener: (context, state) {
@@ -70,7 +71,6 @@ class SurveyScreenState extends State<SurveyScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Survey submitted successfully!')),
           );
-          // Navigate back or to a success screen
           Navigator.of(context).pop();
         }
       },
@@ -84,6 +84,7 @@ class SurveyScreenState extends State<SurveyScreen> {
         if (state is SurveyLoaded) {
           final survey = state.data.survey;
           final currentSectionIndex = state.data.currentSectionIndex;
+          final questionResponses = state.data.surveyResponse.questionResponses;
 
           if (currentSectionIndex >= survey.sections.length) {
             return const Scaffold(
@@ -92,11 +93,8 @@ class SurveyScreenState extends State<SurveyScreen> {
           }
 
           final currentSection = survey.sections[currentSectionIndex];
-          final sectionResponse =
-              state.data.surveyResponse.sectionResponses[currentSection.id]!;
 
           return Scaffold(
-            // AppBar that shows/hides based on scroll
             appBar: _isAppBarVisible
                 ? AppBar(
                     title: Text(survey.title),
@@ -105,13 +103,12 @@ class SurveyScreenState extends State<SurveyScreen> {
                 : null,
             body: Column(
               children: [
-                // Always visible section navigation bar
+                // Section navigation bar
                 Container(
                   padding:
                       const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                   color: Theme.of(context).primaryColor.withAlpha(25),
                   child: SafeArea(
-                    // Ensures content is below status bar
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -119,24 +116,14 @@ class SurveyScreenState extends State<SurveyScreen> {
                           survey.sections.length,
                           (index) {
                             final isActive = index == currentSectionIndex;
-                            final isComplete = state
-                                .data
-                                .surveyResponse
-                                .sectionResponses[survey.sections[index].id]!
-                                .isComplete;
 
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: ActionChip(
                                 backgroundColor: isActive
                                     ? Theme.of(context).primaryColor
-                                    : isComplete
-                                        ? const Color.fromRGBO(
-                                            100, 221, 23, 0.2)
-                                        : null,
-                                avatar: isComplete
-                                    ? const Icon(Icons.check, size: 16)
-                                    : null,
+                                    : const Color.fromRGBO(100, 221, 23, 0.2),
+                                avatar: const Icon(Icons.check, size: 16),
                                 label: Text(
                                   survey.sections[index].title,
                                   style: TextStyle(
@@ -166,8 +153,7 @@ class SurveyScreenState extends State<SurveyScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: currentSection.questions.map((question) {
-                              final response =
-                                  sectionResponse.responses[question.id];
+                              final response = questionResponses[question.id];
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 8.0),
                                 child: _buildQuestionCard(
@@ -184,14 +170,14 @@ class SurveyScreenState extends State<SurveyScreen> {
                         ),
                 ),
 
-                // Section navigation buttons
+                // Navigation buttons
                 SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Previous section button
+                        // Previous
                         Expanded(
                           flex: 2,
                           child: TextButton.icon(
@@ -207,7 +193,7 @@ class SurveyScreenState extends State<SurveyScreen> {
                           ),
                         ),
 
-                        // Section progress indicator
+                        // Progress indicator
                         Expanded(
                           flex: 3,
                           child: Text(
@@ -217,21 +203,18 @@ class SurveyScreenState extends State<SurveyScreen> {
                           ),
                         ),
 
-                        // Next section button
+                        // Next or Submit
                         Expanded(
                           flex: 2,
                           child: TextButton.icon(
                             onPressed:
                                 currentSectionIndex < survey.sections.length - 1
                                     ? () {
-                                        // This will automatically save the current section data
-                                        // before navigating, as implemented in your bloc
                                         context.read<SurveyBloc>().add(
                                             NavigateToSection(
                                                 currentSectionIndex + 1));
                                       }
                                     : () {
-                                        // If we're at the last section, submit the survey
                                         context
                                             .read<SurveyBloc>()
                                             .add(SubmitSurvey());

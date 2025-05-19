@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:iks/model/response/section_response.dart';
+import 'package:iks/model/response/question_response.dart';
 import 'package:iks/model/response/survey_response.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,8 +11,7 @@ class SurveyStorageService {
   /// Save a section response to local storage
   Future<void> saveSectionResponse(
     String surveyId,
-    String sectionId,
-    SectionResponse sectionResponse,
+    Map<String, QuestionResponse> sectionResponses,
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -25,28 +24,32 @@ class SurveyStorageService {
       if (existingResponseJson != null) {
         surveyResponseMap = jsonDecode(existingResponseJson);
 
-        // Update the section responses with the new section response
-        final sectionResponsesMap =
-            surveyResponseMap['sectionResponses'] as Map<String, dynamic>;
-        sectionResponsesMap[sectionId] = sectionResponse.toJson();
+        // Update the question responses map
+        final questionResponsesMap = Map<String, dynamic>.from(
+            surveyResponseMap['questionResponses'] ?? {});
 
-        // Update the timestamp
+        for (final entry in sectionResponses.entries) {
+          questionResponsesMap[entry.key] = entry.value.toJson();
+        }
+
+        surveyResponseMap['questionResponses'] = questionResponsesMap;
         surveyResponseMap['updatedAt'] = DateTime.now().toIso8601String();
       } else {
-        // Create a new survey response
-        final Map<String, dynamic> sectionResponsesMap = {
-          sectionId: sectionResponse.toJson(),
+        // Create a new response
+        final questionResponsesMap = {
+          for (final entry in sectionResponses.entries)
+            entry.key: entry.value.toJson(),
         };
 
         surveyResponseMap = {
           'surveyId': surveyId,
-          'sectionResponses': sectionResponsesMap,
+          'questionResponses': questionResponsesMap,
           'createdAt': DateTime.now().toIso8601String(),
           'updatedAt': DateTime.now().toIso8601String(),
         };
       }
 
-      // Save the updated survey response
+      // Save updated response
       await prefs.setString(
         '$_keyPrefix$surveyId',
         jsonEncode(surveyResponseMap),
@@ -105,7 +108,6 @@ class SurveyStorageService {
       for (final key in surveyKeys) {
         await prefs.remove(key);
       }
-
     } catch (e) {
       throw Exception('Failed to clear survey responses: $e');
     }
